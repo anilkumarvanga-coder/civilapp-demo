@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+backend/.env
+
+# Node
+node_modules/
+dist/
+frontend/.env
+
+# OS
+.DS_Store
+
+# Uploads / local demo data
+backend/uploads/
+*.db
