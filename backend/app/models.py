@@ -9,6 +9,11 @@ class Role(str, Enum):
     MANAGER = "manager"
     FIELD = "field"
 
+class Workspace(str, Enum):
+    INFRA = "infra"
+    BUILD = "build"
+    BOTH = "both"
+
 class ProjectType(str, Enum):
     RAILWAY = "railway"
     ROAD = "road"
@@ -22,6 +27,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(180), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[Role] = mapped_column(SAEnum(Role))
+    workspace: Mapped[Workspace] = mapped_column(SAEnum(Workspace), default=Workspace.INFRA)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 class Project(Base):
