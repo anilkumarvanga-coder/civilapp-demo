@@ -7,9 +7,53 @@ import { AlertTriangle, ArrowLeft, Building2, HardHat, LayoutDashboard, LockKeyh
 type ModalKind = 'update'|'blocker'|'manpower'|'visit'|null
 
 function Login({onLogin}:{onLogin:(u:User)=>void}){
-  const nav=useNavigate(); const [email,setEmail]=useState('md@civilapp.local'); const [password,setPassword]=useState('demo123'); const [error,setError]=useState('')
-  async function submit(e:React.FormEvent){e.preventDefault();setError('');try{const {data}=await api.post('/auth/login',{email,password});localStorage.setItem('civilapp_token',data.access_token);const me=await api.get('/me');onLogin(me.data);nav('/')}catch{setError('Login failed. Use a demo account below.')}}
-  return <div className="login-page"><div className="login-card"><div className="brand"><HardHat size={30}/><div><strong>CivilApp</strong><span>Construction Project Intelligence</span></div></div><h1>Demo workspace</h1><p>Field data in. Management intelligence out.</p><form onSubmit={submit}><label>Email<input value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<div className="error">{error}</div>}<button>Sign in</button></form><div className="demo-accounts"><b>Demo accounts · password demo123</b><button onClick={()=>setEmail('md@civilapp.local')}>MD · md@civilapp.local</button><button onClick={()=>setEmail('manager@civilapp.local')}>Manager · manager@civilapp.local</button><button onClick={()=>setEmail('field@civilapp.local')}>Field · field@civilapp.local</button></div></div></div>
+  const nav=useNavigate()
+  const [loading,setLoading]=useState<string|null>(null)
+  const [error,setError]=useState('')
+
+  async function demoLogin(role:'md'|'manager'|'field'){
+    const accounts={
+      md:'md@civilapp.local',
+      manager:'manager@civilapp.local',
+      field:'field@civilapp.local',
+    }
+    setLoading(role); setError('')
+    try{
+      const {data}=await api.post('/auth/login',{email:accounts[role],password:'demo123'})
+      localStorage.setItem('civilapp_token',data.access_token)
+      const me=await api.get('/me')
+      onLogin(me.data)
+      nav('/')
+    }catch{
+      setError('Demo login could not connect to the backend. Please check the API deployment.')
+    }finally{
+      setLoading(null)
+    }
+  }
+
+  return <div className="login-page">
+    <div className="login-card">
+      <div className="brand"><HardHat size={30}/><div><strong>CivilApp</strong><span>Construction Project Intelligence</span></div></div>
+      <h1>Choose Demo View</h1>
+      <p>Select the role you want to demonstrate. No email or password required.</p>
+      {error&&<div className="error">{error}</div>}
+      <div className="role-login-grid">
+        <button className="role-login primary-role" onClick={()=>demoLogin('md')} disabled={!!loading}>
+          <strong>{loading==='md'?'Opening…':'MD Demo'}</strong>
+          <span>Company dashboard, all projects, reports & controls</span>
+        </button>
+        <button className="role-login" onClick={()=>demoLogin('manager')} disabled={!!loading}>
+          <strong>{loading==='manager'?'Opening…':'Manager Demo'}</strong>
+          <span>Assigned projects, site overview & private manager files</span>
+        </button>
+        <button className="role-login" onClick={()=>demoLogin('field')} disabled={!!loading}>
+          <strong>{loading==='field'?'Opening…':'Field Demo'}</strong>
+          <span>Site updates, manpower, blockers & field data collection</span>
+        </button>
+      </div>
+      <div className="demo-note">Demo data only · production login will be configured after approval</div>
+    </div>
+  </div>
 }
 
 function Kpi({label,value}:{label:string,value:any}){return <div className="kpi"><span>{label}</span><strong>{value}</strong></div>}
