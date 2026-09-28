@@ -14,6 +14,7 @@ class UserOut(BaseModel):
     name: str
     email: str
     role: str
+    workspace: str
     model_config = {"from_attributes": True}
 
 class ProjectOut(BaseModel):
