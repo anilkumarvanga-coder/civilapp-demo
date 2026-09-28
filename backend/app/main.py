@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .db import get_db
 from .models import (
     User, Project, ProjectUser, SiteUpdate, Blocker, DailyManpower, LabourType,
-    Personnel, Vehicle, Villa, VillaStage, SiteVisit, ManagerDocument, Role, ProjectType,
+    Personnel, Vehicle, Villa, VillaStage, SiteVisit, ManagerDocument, Role, Workspace, ProjectType,
 )
 from .schemas import (
     LoginRequest, TokenResponse, UserOut, ProjectOut, ProjectCreate,
@@ -39,10 +39,27 @@ def require_manager_or_md(user: User):
     if user.role not in (Role.MD, Role.MANAGER):
         raise HTTPException(status_code=403, detail="Manager access required")
 
+def project_matches_workspace(project: Project, user: User) -> bool:
+    if user.workspace == Workspace.BOTH:
+        return True
+    if user.workspace == Workspace.BUILD:
+        return project.project_type == ProjectType.VILLA
+    return project.project_type != ProjectType.VILLA
+
+def workspace_project_ids(db: Session, user: User) -> list[int]:
+    stmt = select(Project.id).where(Project.is_active.is_(True))
+    if user.workspace == Workspace.BUILD:
+        stmt = stmt.where(Project.project_type == ProjectType.VILLA)
+    elif user.workspace == Workspace.INFRA:
+        stmt = stmt.where(Project.project_type != ProjectType.VILLA)
+    return list(db.scalars(stmt).all())
+
 def require_project_access(project_id: int, user: User, db: Session) -> Project:
     project = db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    if not project_matches_workspace(project, user):
+        raise HTTPException(status_code=403, detail="Project belongs to a different CivilApp workspace")
     if user.role == Role.MD:
         return project
     assigned = db.scalar(select(ProjectUser.id).where(ProjectUser.project_id == project_id, ProjectUser.user_id == user.id))
@@ -68,14 +85,21 @@ def me(user: User = Depends(get_current_user)):
 @app.get("/users", response_model=list[UserOut])
 def users(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     require_md(user)
-    return db.scalars(select(User).where(User.is_active.is_(True)).order_by(User.name)).all()
+    stmt = select(User).where(User.is_active.is_(True))
+    if user.workspace != Workspace.BOTH:
+        stmt = stmt.where(User.workspace.in_([user.workspace, Workspace.BOTH]))
+    return db.scalars(stmt.order_by(User.name)).all()
 
 @app.get("/projects", response_model=list[ProjectOut])
 def projects(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    if user.role == Role.MD:
-        return db.scalars(select(Project).where(Project.is_active.is_(True)).order_by(Project.name)).all()
-    stmt = select(Project).join(ProjectUser, ProjectUser.project_id == Project.id).where(ProjectUser.user_id == user.id, Project.is_active.is_(True)).order_by(Project.name)
-    return db.scalars(stmt).all()
+    stmt = select(Project).where(Project.is_active.is_(True))
+    if user.workspace == Workspace.BUILD:
+        stmt = stmt.where(Project.project_type == ProjectType.VILLA)
+    elif user.workspace == Workspace.INFRA:
+        stmt = stmt.where(Project.project_type != ProjectType.VILLA)
+    if user.role != Role.MD:
+        stmt = stmt.join(ProjectUser, ProjectUser.project_id == Project.id).where(ProjectUser.user_id == user.id)
+    return db.scalars(stmt.order_by(Project.name)).all()
 
 @app.post("/projects", response_model=ProjectOut)
 def create_project(payload: ProjectCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
@@ -86,6 +110,10 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db), user: 
         project_type = ProjectType(payload.project_type)
     except ValueError:
         raise HTTPException(status_code=400, detail="Unsupported project type")
+    if user.workspace == Workspace.INFRA and project_type == ProjectType.VILLA:
+        raise HTTPException(status_code=403, detail="Villa/building projects must be created from CivilApp Build")
+    if user.workspace == Workspace.BUILD and project_type != ProjectType.VILLA:
+        raise HTTPException(status_code=403, detail="Road/rail/earthwork projects must be created from CivilApp Infra")
     project = Project(code=payload.code.strip(), name=payload.name.strip(), project_type=project_type, client=payload.client.strip(), location=payload.location.strip(), start_date=payload.start_date, target_date=payload.target_date, progress_percent=0)
     db.add(project); db.flush()
     valid_users = set(db.scalars(select(User.id).where(User.id.in_(payload.assigned_user_ids))).all()) if payload.assigned_user_ids else set()
@@ -228,14 +256,15 @@ def villa_stages(villa_id: int, db: Session = Depends(get_db), user: User = Depe
 @app.get("/dashboard/md")
 def md_dashboard(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     require_md(user)
-    total_projects = db.scalar(select(func.count(Project.id)).where(Project.is_active.is_(True))) or 0
+    ids = workspace_project_ids(db, user)
+    total_projects = len(ids)
     today = date.today()
-    workforce = db.scalar(select(func.coalesce(func.sum(DailyManpower.count), 0)).where(DailyManpower.work_date == today)) or 0
-    active_machinery = db.scalar(select(func.count(Vehicle.id)).where(Vehicle.status == "working")) or 0
-    active_blockers = db.scalar(select(func.count(Blocker.id)).where(Blocker.status == "open")) or 0
-    trips = db.scalar(select(func.coalesce(func.sum(SiteUpdate.lorry_trips), 0)).where(func.date(SiteUpdate.created_at) == today)) or 0
-    projects = db.scalars(select(Project).where(Project.is_active.is_(True)).order_by(Project.progress_percent.desc())).all()
-    blockers = db.scalars(select(Blocker).where(Blocker.status == "open").order_by(Blocker.opened_at.desc()).limit(8)).all()
+    workforce = db.scalar(select(func.coalesce(func.sum(DailyManpower.count), 0)).where(DailyManpower.work_date == today, DailyManpower.project_id.in_(ids))) or 0 if ids else 0
+    active_machinery = db.scalar(select(func.count(Vehicle.id)).where(Vehicle.status == "working", Vehicle.project_id.in_(ids))) or 0 if ids else 0
+    active_blockers = db.scalar(select(func.count(Blocker.id)).where(Blocker.status == "open", Blocker.project_id.in_(ids))) or 0 if ids else 0
+    trips = db.scalar(select(func.coalesce(func.sum(SiteUpdate.lorry_trips), 0)).where(func.date(SiteUpdate.created_at) == today, SiteUpdate.project_id.in_(ids))) or 0 if ids else 0
+    projects = db.scalars(select(Project).where(Project.id.in_(ids)).order_by(Project.progress_percent.desc())).all() if ids else []
+    blockers = db.scalars(select(Blocker).where(Blocker.status == "open", Blocker.project_id.in_(ids)).order_by(Blocker.opened_at.desc()).limit(8)).all() if ids else []
     return {
         "kpis": {"total_projects": total_projects, "total_workforce": workforce, "active_machinery": active_machinery, "lorry_trips": trips, "active_blockers": active_blockers},
         "projects": [{"id": p.id, "name": p.name, "code": p.code, "type": p.project_type.value, "progress": p.progress_percent} for p in projects],
