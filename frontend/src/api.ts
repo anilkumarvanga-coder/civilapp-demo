@@ -69,7 +69,7 @@ const demoApi:any={
       return {data:{kpis:{total_projects:ps.length,total_workforce:user.workspace==='infra'?126:186,active_machinery:user.workspace==='infra'?24:8,lorry_trips:user.workspace==='infra'?42:12,active_blockers:user.workspace==='infra'?2:1},projects:ps,blockers:ids.flatMap(id=>blockers[id]||[])}}
     }
     const pd=url.match(/^\/dashboard\/projects\/(\d+)$/)
-    if(pd){const id=+pd[1];return {data:{kpis:{updates:(updates[id]||[]).length,manpower:id<4?87:64,active_machinery:id<4?6:4,blockers:(blockers[id]||[]).length}}}
+    if(pd){const id=+pd[1];return {data:{kpis:{updates:(updates[id]||[]).length,manpower:id<4?87:64,active_machinery:id<4?6:4,blockers:(blockers[id]||[]).length}}}}
     const u=url.match(/^\/projects\/(\d+)\/updates$/);if(u)return {data:updates[+u[1]]||[]}
     const b=url.match(/^\/projects\/(\d+)\/blockers$/);if(b)return {data:blockers[+b[1]]||[]}
     const v=url.match(/^\/projects\/(\d+)\/vehicles$/);if(v)return {data:vehicles[+v[1]]||[]}
