@@ -1,56 +1,42 @@
-# CivilApp Demo
+# CivilApp
 
-Demo-first civil/construction project monitoring app.
+CivilApp is a construction intelligence platform with two separate user experiences:
+
+- **CivilApp Infra** — roads, railway and earthwork projects
+- **CivilApp Build** — villas, buildings and residential developments
+
+The public frontend never contains login credentials. Authentication is handled by the FastAPI backend.
 
 ## Structure
 
 - `frontend/` — React + TypeScript + Vite
 - `backend/` — FastAPI + SQLAlchemy
 - `docker-compose.yml` — local PostgreSQL
-- `.env.example` — environment template
+- `.env.example` — environment-variable template
 
-## Demo accounts
+## Secure demo bootstrap
 
-- MD: `md@civilapp.local` / `demo123`
-- Manager: `manager@civilapp.local` / `demo123`
-- Field: `field@civilapp.local` / `demo123`
+Demo accounts are optional and are created only when `ENABLE_DEMO_SEED=true`. Email addresses and passwords must be supplied as hosting environment variables:
 
-## Local run
+- `BOOTSTRAP_INFRA_EMAIL`
+- `BOOTSTRAP_INFRA_PASSWORD`
+- `BOOTSTRAP_BUILD_EMAIL`
+- `BOOTSTRAP_BUILD_PASSWORD`
 
-### 1) Database
-```bash
-docker compose up -d db
-```
+Never commit real values to this repository.
 
-### 2) Backend
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp ../.env.example .env
-uvicorn app.main:app --reload
-```
+## Frontend deployment
 
-Backend: http://localhost:8000  
-API docs: http://localhost:8000/docs
+The frontend can be deployed to Vercel. Set:
 
-### 3) Frontend
-```bash
-cd frontend
-npm install
-cp ../.env.example .env
-npm run dev
-```
+`VITE_API_URL=https://your-backend-domain.example`
 
-Frontend: http://localhost:5173
+Without a reachable backend, secure login cannot work.
 
-## Deployment plan
+## Backend deployment
 
-For demo:
-- Frontend: Vercel
-- Backend: Render/Railway/Fly.io or similar Python host
-- DB: managed PostgreSQL
+For the demo, FastAPI can run on a managed Python/container host with PostgreSQL. After approval, the same backend can be moved to AWS and object storage can be connected for project photos, documents and drone media.
 
-After approval:
-- move backend/database/object storage to AWS without rewriting the app.
+## Local development
+
+Start PostgreSQL with `docker compose up -d db`, install the backend requirements and run `uvicorn app.main:app --reload`. In `frontend/`, run `npm install` followed by `npm run dev`.
