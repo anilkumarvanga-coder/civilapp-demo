@@ -252,18 +252,177 @@ function BuildProject({project,onBack}) {
   </div>
 }
 
-function GenericPage({workspace,page}) {
+
+function InfraProjectsPage({openProject}) {
+  return <div className="page">
+    <section className="page-title"><div><span className="eyebrow">PROJECT PORTFOLIO</span><h1>All infrastructure projects</h1><p>Compare schedule, value, progress, utilization and risk across active packages.</p></div><button className="primary"><FileText size={16}/>Portfolio report</button></section>
+    <div className="project-table card">
+      <div className="project-table-head"><span>Project</span><span>Progress</span><span>Value</span><span>Risk</span><span>Action</span></div>
+      {infraProjects.map((p,i)=><div className="project-table-row" key={p.id}>
+        <div className="project-table-name"><div className="mini-cover" style={{backgroundImage:`url("${p.image}")`}}/><span><b>{p.name}</b><small>{p.code} · {p.location}</small></span></div>
+        <div><Progress value={p.progress}/><small>{p.progress}% complete</small></div>
+        <b>{p.value}</b>
+        <span className={i===0?'risk-pill red':'risk-pill green'}>{i===0?'2 active blockers':'On track'}</span>
+        <button className="table-action" onClick={()=>openProject(p)}>Open <ChevronRight size={14}/></button>
+      </div>)}
+    </div>
+  </div>
+}
+
+function ChainagePage() {
+  const rows=[
+    ['CH 10+000–12+500','Embankment','100%','Completed'],
+    ['CH 12+500–15+000','Subgrade','86%','In progress'],
+    ['CH 15+000–18+500','GSB','62%','In progress'],
+    ['CH 18+500–20+300','Compaction','74%','In progress'],
+    ['CH 20+300–22+400','Structures','51%','In progress'],
+    ['CH 22+400–22+900','Land handover','0%','Blocked'],
+    ['CH 22+900–25+000','Earthwork','18%','Started']
+  ]
+  return <div className="page">
+    <section className="page-title"><div><span className="eyebrow">LINEAR PROJECT CONTROL</span><h1>Chainage & layer intelligence</h1><p>See exactly what is happening along the alignment and which layer is controlling progress.</p></div><button className="primary"><MapIcon size={16}/>Alignment map</button></section>
+    <section className="card chainage-dashboard">
+      <div className="card-head"><div><span className="eyebrow">CORRIDOR STATUS</span><h2>Package RL-EC-01 · CH 10+000 → 25+000</h2></div><span className="count-badge green">15.0 km</span></div>
+      <div className="chainage-scale"><span>10+000</span><span>13+000</span><span>16+000</span><span>19+000</span><span>22+000</span><span>25+000</span></div>
+      <div className="chainage-track large"><div className="segment complete" style={{width:'36%'}}/><div className="segment active" style={{width:'41%'}}/><div className="segment blocked" style={{width:'8%'}}/><div className="segment pending" style={{width:'15%'}}/></div>
+      <div className="chainage-legend"><span><i className="complete"/>Completed</span><span><i className="active"/>In progress</span><span><i className="blocked"/>Blocked</span><span><i className="pending"/>Pending</span></div>
+    </section>
+    <div className="grid-half">
+      <section className="card"><div className="card-head"><div><span className="eyebrow">LAYER MATRIX</span><h2>Progress by activity</h2></div></div>
+        <div className="layer-matrix">{['Earthwork','Embankment','Subgrade','GSB','WMM','Drainage'].map((name,i)=><div key={name}><span>{name}</span>{[92,84,68,51,34,47][i]}%<Progress value={[92,84,68,51,34,47][i]}/></div>)}</div>
+      </section>
+      <section className="card"><div className="card-head"><div><span className="eyebrow">ACTIVE WORK FRONTS</span><h2>Field activity by chainage</h2></div></div>
+        <div className="chainage-rows">{rows.map(([ch,act,pct,status])=><div key={ch}><span><b>{ch}</b><small>{act}</small></span><strong>{pct}</strong><em className={status==='Blocked'?'bad':''}>{status}</em></div>)}</div>
+      </section>
+    </div>
+  </div>
+}
+
+function FleetPage() {
+  const machines=[
+    ['EX-12','Excavator','RL-EC-01','Working','92%'],
+    ['GR-04','Grader','EW-09','Breakdown','0%'],
+    ['RL-07','Roller','NH-167A','Working','88%'],
+    ['DT-18','Tipper','RL-EC-01','Working','95%'],
+    ['WT-03','Water Tanker','RL-EC-01','Working','79%'],
+    ['DZ-02','Dozer','EW-09','Idle','42%']
+  ]
+  return <div className="page">
+    <section className="page-title"><div><span className="eyebrow">FLEET INTELLIGENCE</span><h1>Fleet & machinery</h1><p>Utilization, breakdowns and deployment across every active project.</p></div><button className="primary"><Wrench size={16}/>Maintenance summary</button></section>
+    <div className="kpi-row">
+      <Kpi icon={Truck} label="Total Equipment" value="92" detail="Across 3 projects"/>
+      <Kpi icon={Activity} label="Operating" value="84" detail="91% availability"/>
+      <Kpi icon={Wrench} label="Breakdowns" value="3" detail="1 critical"/>
+      <Kpi icon={Gauge} label="Avg Utilization" value="86%" detail="+4% vs last month"/>
+      <Kpi icon={TrendingUp} label="Productive Hours" value="612h" detail="This week"/>
+    </div>
+    <div className="grid-half">
+      <section className="card"><div className="card-head"><div><span className="eyebrow">UTILIZATION</span><h2>Equipment class performance</h2></div></div><div className="fleet-bars">{[['Excavators',91],['Graders',75],['Rollers',96],['Tippers',89],['Tankers',81],['Dozers',72]].map(([n,v])=><div key={n}><span>{n}</span><Progress value={v}/><b>{v}%</b></div>)}</div></section>
+      <section className="card"><div className="card-head"><div><span className="eyebrow">BREAKDOWN WATCH</span><h2>Maintenance attention</h2></div><span className="count-badge">3 open</span></div><div className="issue-list"><div><span className="severity red">CRITICAL</span><b>GR-04 hydraulic pressure loss</b><small>EW-09 · Grader · Plant team assigned</small><em>2 days</em></div><div><span className="severity amber">HIGH</span><b>EX-21 bucket pin wear</b><small>RL-EC-01 · Excavator</small><em>6 hrs</em></div><div><span className="severity blue">WATCH</span><b>WT-03 service due</b><small>RL-EC-01 · Water tanker</small><em>Tomorrow</em></div></div></section>
+    </div>
+    <section className="card portfolio-card"><div className="card-head"><div><span className="eyebrow">LIVE FLEET REGISTER</span><h2>Equipment deployment</h2></div></div><div className="data-grid fleet-table">{machines.map(m=><div key={m[0]}><b>{m[0]}</b><span>{m[1]}</span><span>{m[2]}</span><em className={m[3]==='Breakdown'?'bad':''}>{m[3]}</em><strong>{m[4]}</strong></div>)}</div></section>
+  </div>
+}
+
+function WorkforcePage() {
+  return <div className="page">
+    <section className="page-title"><div><span className="eyebrow">WORKFORCE INTELLIGENCE</span><h1>People on site</h1><p>Daily manpower, tracked personnel and productivity visibility across projects.</p></div><button className="primary"><UsersRound size={16}/>Daily manpower sheet</button></section>
+    <div className="kpi-row">
+      <Kpi icon={UsersRound} label="Total Workforce" value="1,248" detail="Today"/>
+      <Kpi icon={HardHat} label="Skilled Labour" value="428" detail="34% of workforce"/>
+      <Kpi icon={Truck} label="Drivers" value="118" detail="Names tracked"/>
+      <Kpi icon={Wrench} label="Operators" value="76" detail="Machine linked"/>
+      <Kpi icon={Activity} label="Attendance" value="96.8%" detail="Across active projects"/>
+    </div>
+    <div className="grid-half">
+      <section className="card"><div className="card-head"><div><span className="eyebrow">MANPOWER MIX</span><h2>Today by labour type</h2></div></div><div className="workforce-grid">{[['Helpers',356],['Masons',184],['Carpenters',96],['Bar Benders',88],['Drivers',118],['Operators',76],['Survey Teams',24],['Supervisors',31]].map(([n,v])=><div key={n}><span>{n}</span><strong>{v}</strong><small>{Math.round(v/12.48)}% of total</small></div>)}</div></section>
+      <section className="card"><div className="card-head"><div><span className="eyebrow">TREND</span><h2>7-day workforce trend</h2></div></div><div className="chart-bars">{[1080,1124,1168,1206,1194,1232,1248].map((v,i)=><div key={i}><i style={{height:`${(v-980)/1.6}px`}}/><span>{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}</span></div>)}</div></section>
+    </div>
+    <section className="card portfolio-card"><div className="card-head"><div><span className="eyebrow">TRACKED PERSONNEL</span><h2>Drivers & operators</h2></div></div><div className="data-grid people-table">{[['Ramesh Kumar','Driver','Tipper TS09AB1234','RL-EC-01','Working'],['Suresh Yadav','Driver','Water Tanker WT-03','RL-EC-01','Working'],['Arun Naik','Operator','Excavator EX-12','RL-EC-01','Working'],['Mahesh','Operator','Grader GR-04','EW-09','Breakdown'],['Praveen Reddy','Survey','Total Station','NH-167A','Working']].map(r=><div key={r[0]}><b>{r[0]}</b><span>{r[1]}</span><span>{r[2]}</span><span>{r[3]}</span><em className={r[4]==='Breakdown'?'bad':''}>{r[4]}</em></div>)}</div></section>
+  </div>
+}
+
+function IssuesPage({workspace}) {
   const build=workspace==='build'
-  const titleMap={
-    projects:build?'Developments':'Projects',
-    chainage:'Chainage & Layer Intelligence',
-    fleet:'Fleet & Machinery',
-    people:'Workforce Intelligence',
-    issues:build?'Issues & Snagging':'Blocker Management',
-    reports:'Investor & Management Reports',
-    visuals:'Visual Progress'
+  const items=build?[
+    ['High','Villa 08 · External plaster touch-up','Quality','Assigned','2 days'],
+    ['High','Villa 11 · Bathroom tile alignment','Finishes','In progress','1 day'],
+    ['Medium','Villa 06 · Window seal inspection','QA/QC','Pending','3 days'],
+    ['Medium','Villa 14 · MEP ceiling clash','Coordination','Assigned','4 hrs'],
+    ['Low','Clubhouse · Paint touch-up','Finishes','Pending','1 day']
+  ]:[
+    ['Critical','RL-EC-01 · Land handover CH 22+400–22+900','Land','Open','6 days'],
+    ['High','NH-167A · Drain drawing approval','Drawing','Open','3 days'],
+    ['High','EW-09 · GR-04 hydraulic failure','Machinery','Open','2 days'],
+    ['Medium','RL-EC-01 · Utility shifting interface','Utility','Monitoring','1 day'],
+    ['Low','NH-167A · Aggregate delivery variance','Material','Monitoring','8 hrs']
+  ]
+  return <div className="page">
+    <section className="page-title"><div><span className="eyebrow">{build?'QUALITY & DELIVERY':'RISK CONTROL'}</span><h1>{build?'Issues & snagging':'Blocker management'}</h1><p>{build?'Track defects, rectification and closure evidence.':'See every constraint, ownership and days open across the portfolio.'}</p></div><button className={build?'build-primary':'primary'}><AlertTriangle size={16}/>New issue</button></section>
+    <div className={build?'build-kpi-row':'kpi-row'}>
+      <Kpi icon={AlertTriangle} label="Open Items" value={build?'12':'9'} detail="Across active projects"/>
+      <Kpi icon={Activity} label="High Priority" value={build?'4':'3'} detail="Management attention"/>
+      <Kpi icon={UsersRound} label="Assigned" value={build?'9':'7'} detail="Owner identified"/>
+      <Kpi icon={CheckCircle2} label="Closed This Week" value={build?'18':'11'} detail="With evidence"/>
+      <Kpi icon={Gauge} label="Avg Closure" value={build?'2.4d':'3.1d'} detail="Last 30 days"/>
+    </div>
+    <section className="card portfolio-card"><div className="card-head"><div><span className="eyebrow">ACTIVE REGISTER</span><h2>{build?'Snagging & issues':'Project blockers'}</h2></div></div><div className="issues-table">{items.map((r,i)=><div key={i}><span className={r[0]==='Critical'||r[0]==='High'?'severity red':'severity amber'}>{r[0]}</span><b>{r[1]}</b><span>{r[2]}</span><em>{r[3]}</em><small>{r[4]}</small></div>)}</div></section>
+  </div>
+}
+
+function ReportsPage({workspace}) {
+  const build=workspace==='build'
+  const cards=build?[
+    ['Investor Monthly Report','Portfolio progress, unit delivery, photos and risks','Monthly'],
+    ['Development Progress Pack','Development-by-development progress and stages','Weekly'],
+    ['Visual Evidence Report','Before/during/after and drone comparison','On demand'],
+    ['Snagging Closure Report','Open, assigned, rectified and closed issues','Weekly']
+  ]:[
+    ['Executive Portfolio Report','Progress, value, productivity, risk and blockers','Monthly'],
+    ['Project Progress Report','Chainage, BOQ, machinery, manpower and updates','Weekly'],
+    ['Fleet Utilization Report','Equipment deployment and breakdown trends','Weekly'],
+    ['Blocker Escalation Report','Open constraints, ownership and ageing','Daily']
+  ]
+  return <div className="page">
+    <section className="page-title"><div><span className="eyebrow">REPORTING LAYER</span><h1>{build?'Investor reports':'Management reports'}</h1><p>Turn structured field data into presentation-ready reports without duplicate data entry.</p></div><button className={build?'build-primary':'primary'}><FileText size={16}/>Generate report</button></section>
+    <div className="report-grid">{cards.map((r,i)=><section className="report-card" key={r[0]}><div className="report-icon"><FileText/></div><span>{r[2]}</span><h3>{r[0]}</h3><p>{r[1]}</p><button>Preview report <ChevronRight size={14}/></button></section>)}</div>
+    <div className="grid-half">
+      <section className="card"><div className="card-head"><div><span className="eyebrow">RECENTLY GENERATED</span><h2>Report history</h2></div></div><div className="report-history">{['September Portfolio Review','Week 38 Progress Pack','Board Risk Summary','Visual Progress Pack'].map((x,i)=><div key={x}><span><FileText size={16}/><b>{x}</b></span><small>{['28 Sep 2026','22 Sep 2026','18 Sep 2026','12 Sep 2026'][i]}</small><button>Open</button></div>)}</div></section>
+      <section className="card"><div className="card-head"><div><span className="eyebrow">REPORT AUTOMATION</span><h2>Scheduled delivery</h2></div></div><div className="schedule-list"><div><span><b>Weekly project summary</b><small>Every Monday · 8:00 AM</small></span><em>Active</em></div><div><span><b>Monthly investor pack</b><small>1st of every month</small></span><em>Active</em></div><div><span><b>Critical blocker digest</b><small>When high priority issue opens</small></span><em>Active</em></div></div></section>
+    </div>
+  </div>
+}
+
+function VisualProgressPage() {
+  const shots=[
+    ['Foundation','04 Mar 2026','https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=900&q=80'],
+    ['Structure','12 Jun 2026','https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=900&q=80'],
+    ['Blockwork','21 Jul 2026','https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=900&q=80'],
+    ['Internal Finishes','18 Sep 2026','https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=900&q=80']
+  ]
+  return <div className="page build-page">
+    <section className="build-title"><div><span className="eyebrow">VISUAL INTELLIGENCE</span><h1>Visual progress</h1><p>Construction history organized by development, asset, stage and capture date.</p></div><button className="build-primary"><Camera size={16}/>Upload capture</button></section>
+    <section className="visual-hero-card"><div><span className="eyebrow">GREEN MEADOWS · VILLA 08</span><h2>From first excavation to finishing</h2><p>Move through time to compare what changed on site.</p></div><strong>72%</strong></section>
+    <div className="visual-progress-grid">{shots.map((s,i)=><div key={s[0]} className="visual-shot" style={{backgroundImage:`linear-gradient(to top,rgba(8,27,21,.75),transparent 60%),url("${s[2]}")`}}><span>{s[1]}</span><b>{s[0]}</b><small>{i===shots.length-1?'Latest capture':'Verified evidence'}</small></div>)}</div>
+    <section className="card portfolio-card"><div className="card-head"><div><span className="eyebrow">DRONE TIMELINE</span><h2>Development overview by month</h2></div><button className="ghost"><PlayCircle size={15}/>Play timeline</button></div><div className="drone-timeline">{['Jan','Mar','May','Jul','Sep'].map((m,i)=><div key={m}><i className={i===4?'active':''}/><span>{m}</span><b>{[18,29,43,58,72][i]}%</b></div>)}</div></section>
+  </div>
+}
+
+function GenericPage({workspace,page,openProject}) {
+  if(workspace==='infra'){
+    if(page==='projects') return <InfraProjectsPage openProject={openProject}/>
+    if(page==='chainage') return <ChainagePage/>
+    if(page==='fleet') return <FleetPage/>
+    if(page==='people') return <WorkforcePage/>
+    if(page==='issues') return <IssuesPage workspace="infra"/>
+    if(page==='reports') return <ReportsPage workspace="infra"/>
+  } else {
+    if(page==='projects') return <BuildOverview openProject={openProject}/>
+    if(page==='visuals') return <VisualProgressPage/>
+    if(page==='issues') return <IssuesPage workspace="build"/>
+    if(page==='reports') return <ReportsPage workspace="build"/>
   }
-  return <div className="page"><section className="page-title"><div><span className="eyebrow">{build?'CIVILAPP BUILD':'CIVILAPP INFRA'}</span><h1>{titleMap[page]||'Module'}</h1><p>This demo module is ready for deeper workflow screens in the next iteration.</p></div></section><section className="card module-preview"><div className="module-icon">{build?<Building2/>:<HardHat/>}</div><h2>{titleMap[page]}</h2><p>The full investor demo focuses on the portfolio, project command center and visual construction journey. This module is included in navigation to demonstrate the complete product architecture.</p><div className="module-features"><span><CheckCircle2/>Role-aware data</span><span><CheckCircle2/>Project filtering</span><span><CheckCircle2/>Audit-ready records</span><span><CheckCircle2/>Export & reporting path</span></div></section></div>
+  return null
 }
 
 function Platform({account,logout}) {
@@ -274,8 +433,7 @@ function Platform({account,logout}) {
   const body=useMemo(()=>{
     if(project) return workspace==='infra'?<InfraProject project={project} onBack={()=>setProject(null)}/>:<BuildProject project={project} onBack={()=>setProject(null)}/>
     if(page==='overview') return workspace==='infra'?<InfraOverview openProject={setProject}/>:<BuildOverview openProject={setProject}/>
-    if(page==='projects') return workspace==='infra'?<InfraOverview openProject={setProject}/>:<BuildOverview openProject={setProject}/>
-    return <GenericPage workspace={workspace} page={page}/>
+    return <GenericPage workspace={workspace} page={page} openProject={setProject}/>
   },[workspace,page,project])
   return <div className={workspace==='build'?'platform build-platform':'platform'}><Sidebar workspace={workspace} page={page} setPage={navigate} logout={logout}/><div className="workspace"><Topbar account={account} workspace={workspace}/><main>{body}</main></div></div>
 }
